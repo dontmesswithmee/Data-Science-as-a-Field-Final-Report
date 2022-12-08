@@ -1,0 +1,210 @@
+---
+title: "Data Science in Medicine - Final Report"
+author: "Rahul Chauhan"
+format: html
+editor: visual
+---
+
+## Introduction
+
+Analyzing data to find patterns and trends that could be indicators of future occurrences is the process of predictive analytics. Predictive analytics can be used in the healthcare industry to forecast the likelihood of specific medical disorders or the likelihood that a patient will respond to a specific treatment. Predictive analytics uses methods from data mining, statistics and mathematical modeling to make future predictions about unknowable events. It creates forecasts using historical data. Healthcare practitioners can choose the finest therapies for patients and the most effective ways to customize those treatments to meet their unique needs by using predictive analytics. Additionally, patients who are at risk for complications or relapse can be identified using predictive healthcare analytics, and interventions can be given before issues arise. Predictive analytics has the ability to boost the effectiveness and quality of healthcare services overall.
+
+Wearable technology have been widely employed in the health industry for a variety of purposes, including patient care and personal health.The number of well-known consumer and medical devices that incorporate wearable sensor technologies has gradually increased. In situations involving the elderly, rehabilitation, and people with different disabilities, wearable devices can offer real-time input about a person's health problems. As a result, they can offer an objective alternative to manage and monitor the progression of chronic diseases. The vital indicators such as heart rate, blood pressure, and body temperature are the most often monitored data.
+
+## Data Collection
+
+The objective of this project is to determine whether commercial wearable technology can reliably forecast lying, sitting, and various other levels of physical activity. The dataset obtained was from Harvard Dataverse, An experiment was performed where a sample of 46 participants were taken, 26 of these were female. Three different types of devices used for the data are GENEActiv, an Apple Watch, and a Fitbit Charge. Each participant completed a 65-minute regimen that included 25 minutes of relaxing or resting and 40 total minutes on the treadmill. The amount of energy expended was measured using indirect calorimetry.
+
+## Source of the Data Set
+
+The given data set has been obtained from the [Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZS2Z2J). Let's talk about the attributes of the data set obtained:
+
+1.  X: Serial Number
+2.  X1: Serial Number
+3.  Age: Age of every participant in the sample
+4.  Gender: Gender of every participant in the sample expressed in terms of "1" and "0" for "Male" and "Female" respectively.
+5.  Height: Height of every participant
+6.  Weight: Weight of every participant
+7.  Steps: Number of steps recorded by the watch for the participant
+8.  Heart_Rate: Heart rate recorded by watch for the participant per minute
+9.  Calories: Calories burnt by the participant recorded on device
+10. Distance: Distance walked by the participant in a period of time in metres
+11. Entropy_heart: Variation of the time interval between consecutive heart rates measured in ms
+12. Entropy_steps: A measure of predictability of step count
+13. Resting_Heart: Number of times heart beats per minute when one's still and well-rested.
+14. Corr_Heart_Steps: Correlation coefficient between heart rates and steps
+15. Intensity_Karvonen: Calculates individualized target heart rate parameters using Karvonen Formula
+16. sd_norm_heart: Standard deviation of normalized heart rates
+17. steps_time_distance: The measure of dependency between steps, time and distance
+18. device: The type of watch worn by the participants, eg. Apple, Fit Bit etc.
+19. activity: The type of activity being performed eg. lying down, sitting, cardio etc.
+
+## Data Cleaning
+
+```{r, include = FALSE}
+library(psych)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(curl)
+```
+
+```{r, echo = FALSE}
+participants_data <- read.csv("https://raw.githubusercontent.com/dontmesswithmee/Data-Science-as-a-Field-Final-Report/main/aw_fb_data.csv")
+```
+
+Let's look at first few rows of our data frame:
+
+```{r}
+head(participants_data)
+```
+
+For the given data set we begin by removing some rows that contain too many (\\\>10%) NA values for both qualitative and quantitative variables. We also will remove duplicate columns.\
+
+Let's first look at the structure, summary and other statistics of our data frame:
+
+```{r}
+str(participants_data)
+describe(participants_data)
+summary(participants_data)
+```
+
+Let's look at the names of columns in our data frame and understand if they are in human readable format or not:
+
+```{r}
+colnames(participants_data)
+```
+
+As we can see, there are two column names that are X1 and hear_rate that doesn't make any sense, we will proceed to replace X1 with ID and hear_rate with heart_rate.
+
+```{r}
+names(participants_data)[2] <- 'ID'
+names(participants_data)[8] <- "heart_rate"
+names(participants_data)[12] <- "entropy_steps"
+```
+
+Let's look at it again:
+
+```{r}
+head(participants_data)
+```
+
+Checking for null values in our data frame
+
+```{r}
+sum(is.null(participants_data))
+```
+
+Let's take a look at the dimension of our data frame before removing any duplicate values:
+
+```{r}
+print(paste(c("Rows: ","Columns: "),dim(participants_data)))
+```
+
+After removing duplicate rows:
+
+```{r}
+new_participants_data<-distinct(participants_data)
+head(new_participants_data)
+print(paste(c("Rows: ","Columns: "),dim(new_participants_data)))
+```
+
+Removing duplicate columns, i.e. X and ID are the same, removing X:
+
+```{r}
+new_participants_data <- select(new_participants_data, -c("X"))
+head(new_participants_data)
+```
+
+Since, we have "1" and "0" for our gender, for our ease we will change it to "Male" and "Female"
+
+```{r}
+new_participants_data$gender[new_participants_data$gender == 0] <- "Female"
+new_participants_data$gender[new_participants_data$gender == 1] <- "Male"
+
+tail(new_participants_data)
+```
+
+Segregating the participants who used Apple watch and Fit bit watch into two different data frames:
+
+```{r}
+participants_data_apple<-new_participants_data%>%group_by(device)%>%filter(device=="apple watch")
+participants_data_fitbit<-new_participants_data%>%group_by(device)%>%filter(device=="fitbit")
+```
+
+## EDA
+
+Let's find out the average heart rate of participants in the sample:
+
+```{r}
+mean(new_participants_data$heart_rate)
+```
+
+Thus, the average heart rate of all the participants doing all the activities recorded on the watch is 86. Given that normal heart rate of a human is 80, we can assume that the heart rate of the participants in the sample is higher than normal. Moreover, we need to even further consider if the person in sitting down, lying and so on, because 80 is a just a general heart rate, \
+
+```{r}
+mean(new_participants_data$age)
+```
+
+Average age of the participants in the sample is 29, that means mostly the people considered in the sample are young to middle age, so the analysis can not be assumed the same for senior citizens.
+
+```{r}
+IQR(new_participants_data$age)
+summary(new_participants_data$age)
+```
+
+The inter-quartile range, meaning the spread of the middle of my data is 10, whereas the maximum age of the participant is 56. Thus, the given data set cannot be considered as reliable to predict everything from it, because it's a small sample. Nevertheless, we will extract the most valuable information from it.
+
+Let's explore a bit more in depth:
+
+```{r}
+ggplot(new_participants_data, aes(x=height, y=weight, color=gender, shape=gender)) + 
+    geom_point(size=4) + 
+    labs(title='Height and weight according to Gender of participants')
+```
+
+We can learn more about the individuals' height and weight from the aforementioned visualization. We can infer from the data that men generally appear taller and weigh more than women. In this situation, there are several things we can assume, such as that they will probably burn more calories while using a treadmill. Another presumption might be that their heart rates would be higher, for example.
+
+*No gender based discrimination is intended.*
+
+```{r}
+participants_data_apple %>% ggplot(aes(heart_rate, intensity_karvonen, group_by(device) ,color=gender, shape=gender)) + geom_point(size=1.5) + facet_wrap(~activity) + ggtitle("Heart rate and Intensity vs genre of participants") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+We can infer from the heart rate vs. intensity of different participants that, typically, when people exercise (on a treadmill, during a self-paced walk, etc.), their heart rate increases (this is to be expected). However, when looking at "Running 7 METs," only a few male and female participants have heart rates that are less than 50, which is practically impossible while exercising intensely. This can be attributed to technical bias, the watch may not have operated as planned, or there was definitely a problem with the heart rate sensor. We can still classify it as an anomaly.
+
+```{r}
+new_participants_data$agegroup = cut(new_participants_data$age,c(15,25,35,45,55,65))
+head(new_participants_data)
+fem_data <- new_participants_data %>% filter(gender=='Female')
+ggplot(fem_data, aes(x=heart_rate, fill=agegroup)) + 
+    geom_density(alpha=0.7) +facet_wrap(~activity, scale='free') +
+    labs(title='Heart rate of female participants for different activities and different ages',x='Heart rate')
+```
+
+We can deduce from the following graph that people's heart rates rapidly increase as they age. The likelihood of an elevated heart rate increases with activity. Additionally, adolescent females have a normal heart rate with minimal change during various activities.
+
+```{r}
+ggplot(new_participants_data, 
+       aes(x = gender,
+           fill = activity)) + 
+  geom_bar(position = "dodge")+
+  scale_fill_brewer(palette = "Paired")
+```
+
+The graph up top compares how many men and women participated in the experiment's varied activities and had their actions recorded on watches. As we can see, the graph for female participants engaging in activities will be higher than that of male participants because there are 26 females out of the sample's 46 participants.
+
+```{r}
+qplot(steps, ..density..,data=new_participants_data,geom="freqpoly",xlim=c(90,150),binwidth=2,color=gender)
+```
+
+The graph up above displays the number of steps the watch has counted by gender. We might deduce that a significant portion of female applicants move at a pace between 120 and 130 steps per minute. Furthermore, a decent number of male applicants take a lot less steps; based on the graph above, we can assume that they may be sitting or lying down.
+
+## Bias
+
+There are only 46 people in the dataset provided, which was acquired from Harvard Dataverse. We might have come to a better conclusion if there had been more than 1000 participants. In addition, a number of additional activities, including rhythm (whether regular or irregular), ECG, oxygen level, and others, can be recorded in watches and used for further analysis. In addition, as the second visualization demonstrates, the watches may occasionally be less precise than we would want due to technical flaws that provide undesirable outcomes.
+
+## Conclusion
+
+To sum up, we can estimate heart rate based on a variety of activities we engage in during the day. Sometimes having an irregular heartbeat can be dangerous, but some organizations have already put precautions in place to avoid awful things happening. For instance, Apple's latest watch tracks its wearer's pulse rate and, in the event that it surges in the middle of nowhere, dials "911" and alerts emergency contacts
